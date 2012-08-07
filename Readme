@@ -1,0 +1,14 @@
+This is the first release of a set of programs
+for control of midi instruments on mac os-x
+
+midi_driver    - is a native midi driver using CoreMidi
+coca_interface - is a native interface to cocoa
+playsoftmidi   - is programs that sends midi events to the builtin mac
+	         synt module
+
+This code is not of production quality - and only has sparse
+documentation.
+
+All comments and corrects are welcome
+
+

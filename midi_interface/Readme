@@ -1,0 +1,17 @@
+This is a first attempt at a midi driver
+
+It works most of the time but sometimes it crashes on startup
+I have no idea why
+
+The program is hard wired to receive midi events from VPMK
+
+VPMK is a virtual keyboard and can be downloaded from
+vmpk.sourceforge.net
+
+Instructions:
+
+  start VPMK
+  type Make
+
+Note this driver just detect midi event mo sounds are played
+

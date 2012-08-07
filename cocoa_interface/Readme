@@ -1,0 +1,86 @@
+This is a first attempt at how to make an interpreted interface between
+Erlang and cocoa.
+
+Keywords: nibless, nifs, cocoa, os-x
+
+Problems: 
+
+	  1) Does this work my accident or design
+	  2) Window spontaneously closes after about 5 mins
+
+How this works
+==============
+
+The flow of control is as follows:
+
+1. Starting in Erlang
+   We call coca_nifs:connect_to_coca(Pid)
+   Pid is the pid of a processes that Cocco will send messages to
+   
+2) connect_to_cocoa is a nif
+   It uses a shared library that dynamically loads the Cocoa frameswork
+
+   connect_to_cocoa is defined in coca_nifs.m
+
+   connect_to_cococa is *must* return quickly (since it's a NIF)
+   but connect_to_cocoa is a bit of code to set up a nibless
+   window.
+
+   The basic way to do this doesn't work: ie
+
+    connect_to_cocoa(...){
+        ....
+	[NSApp run];
+    }
+
+    Won't work - well it does work but the BIF never returns.
+
+    So we write this as
+
+    connect_to_cocoa(...){
+        ....
+	erl_drv_steal_main_thread((char *)"blaa",
+			    &tid,
+			    start_thread,
+			    NULL,NULL);
+         return enif_make_int(env, enif_make_atom(env, "looking_good"));		       }
+
+     start_thread(...){
+         ... initialiase ...
+	 [NSApp run]
+     }
+
+     The erl_drv_steal_main_thread uses an undocumented function to run
+the event loop in the main thread. Cocoa MUST run in the main thread.
+And yes it *is* weird.
+    
+3) Objects in the initialise part of the code are created with code like:
+
+     NSButton *button=[[NSButton alloc]initWithFrame:NSMakeRect(10,10,180,32)];
+
+   After we have created my button I just call
+
+      send_erlang("register", "b0", (long)button);
+
+   Button is just a long pointer - so this sends a 
+   {register, b1, Int} message to Erlang Int is the button pointer
+
+   In the example code I register a couple of objects with their addresses
+
+4) Getting objects to do something.
+
+   The NIF coca_nifs:send_to_cocoa(Id, Selector, Str)
+
+   Is used to send a string message to an object.
+
+   So In Erlang I say
+   
+   send_to_cocoa(Text, "setStringValue:", "hello") 
+
+   which is dynamically turned into a call like this.
+
+   [Text setStringValue:@"hello"]
+   
+   send_to_cocoa is NOT evaluated in the main thread so there is
+   some trickery to get cocoa to think this is ok 
+   
