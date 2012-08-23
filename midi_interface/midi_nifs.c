@@ -6,23 +6,20 @@
 #include <CoreServices/CoreServices.h>
 #include <CoreMIDI/MIDIServices.h>
 #include <CoreAudio/HostTime.h>
-
-
+#include <AudioUnit/AudioComponent.h>
 #include <unistd.h>               /* for sleep() function                */
-
 #include <stdlib.h>
 
 //#define CM_DEBUG 1
 
 #include <string.h>
 
-
+//UInt32 AudioComponentCount(AudioComponentDescription* inDesc);
 
 #define MESSAGESIZE 3             /* byte count for MIDI note messages   */
 
 typedef struct
 {
-  ErlNifEnv *env;
   ErlNifPid* pid;
   int id;
 } SaveEnv;
@@ -33,9 +30,6 @@ typedef struct {
   int len;
   int *data;
 } State;
-
-static ErlNifResourceType* mystate = NULL;
-
 
 static void print_error(OSStatus error, const char *operation)
 {
@@ -59,7 +53,8 @@ static ERL_NIF_TERM list_audio_components(ErlNifEnv* env,
 					  const ERL_NIF_TERM argv[])
 {
   int n;
-  n = AudioComponentCount("");
+  // this is completly wrong if I call this I may get screwed
+  n = (int) AudioComponentCount("");
   return enif_make_int(env, n);
 }
 
@@ -90,15 +85,16 @@ typedef UInt64 MIDITimeStamp;
 
 */
 
-void myReadProc(const MIDIPacketList *packetList, 
-		int readProcRefCon,
-		void* srcConnRefCon) {
+static void myReadProc(const MIDIPacketList *packetList, 
+		       void* readProcRefCon,
+		       void* srcConnRefCon) {
   MIDIPacket *packet = (MIDIPacket*)packetList->packet;
   int i, j;
   ERL_NIF_TERM midi, event;
 
   // i is the device number = set to 3344 (don't ask why)
-  i = readProcRefCon;   
+  i = *((int *)readProcRefCon);
+  fprintf(stderr,"Here i=%i\r\n",i);
 
   /* Alloc a new envirment to build the message in */
   ErlNifEnv* env = enif_alloc_env();
@@ -125,12 +121,14 @@ void myReadProc(const MIDIPacketList *packetList,
   enif_clear_env(env);
 }
 
+static int jj;
+
 void my_connect(int i){
   MIDIClientRef midiclient;
   MIDIPortRef   midiin;
   OSStatus status;
   MIDIEndpointRef src;
-  int jj;
+
   status = MIDIClientCreate(CFSTR("TeStInG"), NULL, NULL, &midiclient);
   if (status != 0){
     print_error(status, "MIDICLientCreate");
@@ -138,8 +136,10 @@ void my_connect(int i){
   };
   jj = 3344;
   // send jj not a pointer 
-  status = MIDIInputPortCreate(midiclient, CFSTR("InPuT"), myReadProc, 
-			       jj, 
+  status = MIDIInputPortCreate(midiclient, 
+			       CFSTR("InPuT"), 
+			       myReadProc, 
+			       &jj, 
 			       // NULL,
 			       &midiin);
   if(status != 0){
@@ -155,18 +155,11 @@ void my_connect(int i){
 
 static void *start_thread(void *arg)
 {
-  //TEnv *env = (TEnv *)arg;
-  //ErlNifPid pid;
   int i;
-  fprintf(stderr,"start thread\r\n");
-  // print_sources();
   i = saved-> id;
   fprintf(stderr,"call connect(%i)\r\n", i);
   my_connect(saved->id);
-  // enif_get_local_pid(env->env, env->pid, &pid);
   CFRunLoopRun();
-  // enif_send(NULL, &pid, env->env, enif_make_int(env->env, keycode));
-    // enif_clear_env(env->env);
   return 0;
 }
 
@@ -189,7 +182,6 @@ static ERL_NIF_TERM connect_to_midi_source(
     };
   
   saved = (SaveEnv*) enif_alloc(sizeof(SaveEnv));
-  saved->env = enif_alloc_env(); 
   saved->pid = pid;
   saved->id  = i;
   fprintf(stderr, "saving i=%i\r\n", i);
@@ -205,7 +197,6 @@ static ERL_NIF_TERM list_midi_devices(ErlNifEnv* env,
 				      int argc, 
 				      const ERL_NIF_TERM argv[])
 {
-  State *state;
   int i, n;
   char *str;
   CFStringRef strRef;
@@ -248,7 +239,6 @@ static ERL_NIF_TERM list_midi_devices(ErlNifEnv* env,
     s1 = enif_make_string(env, str, ERL_NIF_LATIN1);
     sources = enif_make_list_cell(env, s1, sources);
   };
-
 
   return enif_make_tuple3(env, sources, dests, devices);
   
