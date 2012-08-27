@@ -16,7 +16,7 @@ beam: ${MODS:%.erl=%.beam}
 
 au_nifs.so: au_nifs.o 
 	cc au_nifs.o -arch i386\
-                       -framework CoreServices\
+                       -framework AudioUnit -framework CoreServices -framework CoreMidi\
                        -bundle -flat_namespace -undefined suppress\
                        -L/usr/local/lib/erlang/lib/erl_interface-3.7.6/lib\
                        -lerl_interface -lei -o au_nifs.so

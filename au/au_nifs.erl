@@ -9,8 +9,62 @@ test() ->
     io:format("L=~p~n#devices = ~p~n",[L,length(L)]).
 
 test1() ->
-    G = make_au_graph(),
-    io:format("G=~p~n",[G]).
+    OutGraph = make_au_graph(),
+    io:format("OutGraph=~p~n",[OutGraph]),
+    SynthNode = my_graph_add_node(OutGraph, {<<"aumu">>,<<"dls ">>,<<"appl">>}),
+    io:format("SynthNode=~p~n",[SynthNode]),
+    Limiter = my_graph_add_node(OutGraph, {<<"aufx">>,<<"lmtr">>,<<"appl">>}),
+    io:format("Limiter=~p~n",[Limiter]),
+    Out = my_graph_add_node(OutGraph, {<<"auou">>,<<"def ">>,<<"appl">>}),
+    io:format("Out=~p~n",[Out]),
+    Result = au_graph_open(OutGraph),
+    io:format("here 12 Result=~p~n",[Result]),
+    au_graph_connect_node_input(OutGraph, SynthNode, 0, Limiter, 0),
+    au_graph_connect_node_input(OutGraph, Limiter, 0, Out, 0),
+    OutSynth = au_graph_node_info(OutGraph, SynthNode, 0),
+    au_graph_initialize(OutGraph),
+    io:format("so far~n"),
+    music_device_midi_event(OutSynth, 176, 0, 0,0),
+    music_device_midi_event(OutSynth, 192, 0, 0,0),
+    au_graph_start(OutGraph),
+    ProgChange=12,
+    Instrument=1,
+    music_device_midi_event(OutSynth, ProgChange, Instrument, 0,0),
+    music_device_midi_event(OutSynth, 144, 20, 127, 0),
+    music_device_midi_event(OutSynth, 144, 21, 127, 0),
+    music_device_midi_event(OutSynth, 144, 22, 127, 0),
+    music_device_midi_event(OutSynth, 144, 52, 127, 0),
+    music_device_midi_event(OutSynth, 144, 52, 127, 0),
+
+
+    true.
+
+au_graph_start(_) ->
+    void.
+
+music_device_midi_event(_A,_B,_C,_D,_E) ->
+    void.
+
+au_graph_initialize(_) ->
+    void.
+
+au_graph_node_info(_,_,_) ->
+    void.
+
+    %%.AUGraphConnectNodeInput (
+
+au_graph_connect_node_input(_,_,_,_,_) ->
+    void.
+
+my_graph_add_node(G, {<<Type:32>>,<<SubType:32>>,<<Manu:32>>}) ->
+    io:format("au_graph_add_node: Type:~p Sub:~p Man:~p~n",[Type,SubType,Manu]),
+    au_graph_add_node(G, {Type, SubType, Manu}).
+
+au_graph_open(_) ->
+    true.
+
+au_graph_add_node(_, _) ->
+    dummy.
 
 make_au_graph() ->
     dummy.
@@ -102,7 +156,7 @@ nif_list_type(_) ->
 %% aupn vbas appl  -  Apple: AUVectorPanner
 %% aumu dls  appl  -  Apple: DLSMusicDevice
 %% aumu samp appl  -  Apple: AUSampler
-%% aumu GARA GaRR  -  Garritan: ARIA Player
+%% aumu GARA GaRR  -  Garritan: ARA Player
 %% aumu Pt3q Mdrt  -  Modartt: Pianoteq Trial 3
 %% aumx 3dmx appl  -  Apple: AUMixer3D
 %% aumx mcmx appl  -  Apple: AUMultiChannelMixer
