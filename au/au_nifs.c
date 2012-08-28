@@ -110,11 +110,11 @@ static ERL_NIF_TERM make_au_graph(ErlNifEnv* env,
   // allocate our resource thing
   outGraph = (AUGraph*)enif_alloc_resource(my_au_graph_type, sizeof(AUGraph));
   result = NewAUGraph(outGraph);
-  fprintf(stderr,"result1=%i\r\n", result);
-  fprintf(stderr,"xxx=%i\r\n", (int)(*outGraph));
+  //fprintf(stderr,"result1=%i\r\n", result);
+  //fprintf(stderr,"xxx=%i\r\n", (int)(*outGraph));
   // CAShow(outGraph);
   handle = enif_make_handle(env, outGraph);
-  fprintf(stderr, "new au graph=%i\r\n", (int) outGraph);
+  // fprintf(stderr, "new au graph=%i\r\n", (int) outGraph);
   return handle;
 }
 
@@ -125,16 +125,15 @@ static ERL_NIF_TERM music_device_midi_event(ErlNifEnv* env,
   AudioUnit *outNode;
   OSStatus result;
   int i,j,k,l;
-  AudioComponentDescription cd;
   if (!enif_get_resource(env, argv[0], my_audio_unit_type, (void **)&outNode))
     return enif_make_badarg(env); 
   enif_get_int(env, argv[1], &i);
   enif_get_int(env, argv[2], &j);
   enif_get_int(env, argv[3], &k);
   enif_get_int(env, argv[4], &l);
-  fprintf(stderr, "music_midi ready =%i\r\n", i);
+  // fprintf(stderr, "music_midi ready =%i\r\n", i);
   result = MusicDeviceMIDIEvent(*outNode,i,j,k,l);
-  fprintf(stderr, "music_midi result=%i\r\n", (int) result);
+  // fprintf(stderr, "music_midi result=%i\r\n", (int) result);
   return enif_make_int(env, (int) result);
 }
 
@@ -144,7 +143,7 @@ static ERL_NIF_TERM au_graph_add_node(ErlNifEnv* env,
 				      const ERL_NIF_TERM argv[])
 {
   AUGraph *outGraph;
-  AudioUnit *outNode;
+  AUNode *outNode;
   OSStatus result;
   ERL_NIF_TERM handle;
   const ERL_NIF_TERM* tuple;
@@ -155,7 +154,7 @@ static ERL_NIF_TERM au_graph_add_node(ErlNifEnv* env,
     {
       return enif_make_badarg(env); 
     };
-  fprintf(stderr, "recovered AUGraph pointer=%i\r\n", (int)outGraph);
+  // fprintf(stderr, "recovered AUGraph pointer=%i\r\n", (int)outGraph);
   enif_get_tuple(env, argv[1], &arity, &tuple);
   enif_get_int(env, tuple[0], &type);
   enif_get_int(env, tuple[1], &subtype);
@@ -163,17 +162,16 @@ static ERL_NIF_TERM au_graph_add_node(ErlNifEnv* env,
   cd.componentType = type;
   cd.componentSubType = subtype;
   cd.componentManufacturer = man;
-  fprintf(stderr, "recovered type sub man = %i %i %i\r\n", type, subtype, man);
+  // fprintf(stderr, "recovered type sub man = %i %i %i\r\n", type, subtype, man);
   cd.componentFlags = 0;
   cd.componentFlagsMask = 0;
   
   // make space for the result
-  outNode = (AudioUnit*)enif_alloc_resource(my_au_node_type, sizeof(AudioUnit));
+  outNode = (AUNode*)enif_alloc_resource(my_au_node_type, sizeof(AUNode));
   result = AUGraphAddNode(*outGraph, &cd, outNode);
-  fprintf(stderr, "result2 = %i\r\n", result);
-	 
+  //fprintf(stderr, "result2 = %i\r\n", result);
   handle = enif_make_handle(env, outNode);
-  fprintf(stderr, "new au node=%i\r\n", (int) outNode);
+  //fprintf(stderr, "new au node=%i\r\n", (int) outNode);
   return handle;
 }
 
@@ -186,7 +184,7 @@ static ERL_NIF_TERM au_graph_initialize(ErlNifEnv* env,
   if (!enif_get_resource(env, argv[0], my_au_graph_type, (void **)&outGraph))
     return enif_make_badarg(env); 
   result = AUGraphInitialize(*outGraph);
-  fprintf(stderr, "au_graph_initialize result3=%i\r\n",result);
+  //fprintf(stderr, "au_graph_initialize result3=%i\r\n",result);
   return enif_make_int(env, (int) result);
 }
 
@@ -196,7 +194,7 @@ static ERL_NIF_TERM au_graph_node_info(ErlNifEnv* env,
 {
   AUGraph *outGraph;
   AUNode *a;
-  AudioUnit outNode;
+  AudioUnit *outNode;
   int i;
   ERL_NIF_TERM handle;
   OSStatus result;
@@ -208,7 +206,7 @@ static ERL_NIF_TERM au_graph_node_info(ErlNifEnv* env,
     return enif_make_badarg(env); 
   outNode = (AudioUnit*)enif_alloc_resource(my_audio_unit_type, sizeof(AudioUnit));
   result = AUGraphNodeInfo(*outGraph, *a, 0, outNode);
-  fprintf(stderr, "result3=%i\r\n",result);
+  // fprintf(stderr, "result3=%i\r\n",result);
   handle = enif_make_handle(env, outNode);
   // CAShow(outGraph);
   return handle;
@@ -234,8 +232,8 @@ static ERL_NIF_TERM au_graph_connect_node_input(ErlNifEnv* env,
   if (!enif_get_int(env, argv[4], &j))
     return enif_make_badarg(env);
   result = AUGraphConnectNodeInput (*outGraph, *a, 0, *b, 0);
-  fprintf(stderr,"result5=%i\r\n",result);
-  fprintf(stderr, "recovered AUGraph pointer=%i\r\n", (int)outGraph);
+  //fprintf(stderr,"result5=%i\r\n",result);
+  //fprintf(stderr, "recovered AUGraph pointer=%i\r\n", (int)outGraph);
   return enif_make_int(env, result);
 }
 
@@ -250,8 +248,8 @@ static ERL_NIF_TERM au_graph_open(ErlNifEnv* env,
       return enif_make_badarg(env); 
     };
   result = AUGraphOpen(*outGraph);
-  fprintf(stderr, "au_graph_open result4=%i\r\n", result);
-  fprintf(stderr, "recovered AUGraph pointer=%i\r\n", (int)outGraph);
+  //fprintf(stderr, "au_graph_open result4=%i\r\n", result);
+  //fprintf(stderr, "recovered AUGraph pointer=%i\r\n", (int)outGraph);
   return enif_make_int(env, result);
 }
 
@@ -266,10 +264,10 @@ static ERL_NIF_TERM au_graph_start(ErlNifEnv* env,
       return enif_make_badarg(env); 
     };
   result = AUGraphStart(*outGraph);
-  fprintf(stderr, "au_graph_start result4=%i\r\n", result);
-  fprintf(stderr, "recovered AUGraph pointer=%i\r\n", (int)outGraph);
+  //fprintf(stderr, "au_graph_start result4=%i\r\n", result);
+  //fprintf(stderr, "recovered AUGraph pointer=%i\r\n", (int)outGraph);
   return enif_make_int(env, result);
-}
+} 
 
 static void destroy_state(ErlNifEnv* env, void* obj)
 {

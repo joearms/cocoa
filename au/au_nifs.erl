@@ -3,6 +3,15 @@
 -on_load(load_lib/0).
 -import(lists, [reverse/1]).
 
+
+-define(kMidiMessage_ControlChange, 16#B).
+-define(kMidiMessage_ProgramChange, 16#C).
+-define(kMidiMessage_BankMSBControl, 0).
+-define(kMidiMessage_BankLSBControl, 32).
+-define(kMidiMessage_NoteOn,16#9).
+-define(kMidiMessageProgramChange,16#C0).
+
+
 test() ->
     L = all_aus(),
     %% elib1_misc:dump("au.tmp",L),
@@ -10,34 +19,70 @@ test() ->
 
 test1() ->
     OutGraph = make_au_graph(),
-    io:format("OutGraph=~p~n",[OutGraph]),
+    %% io:format("OutGraph=~p~n",[OutGraph]),
     SynthNode = my_graph_add_node(OutGraph, {<<"aumu">>,<<"dls ">>,<<"appl">>}),
-    io:format("SynthNode=~p~n",[SynthNode]),
+    %% io:format("SynthNode=~p~n",[SynthNode]),
     Limiter = my_graph_add_node(OutGraph, {<<"aufx">>,<<"lmtr">>,<<"appl">>}),
-    io:format("Limiter=~p~n",[Limiter]),
+    %% io:format("Limiter=~p~n",[Limiter]),
     Out = my_graph_add_node(OutGraph, {<<"auou">>,<<"def ">>,<<"appl">>}),
-    io:format("Out=~p~n",[Out]),
+    %% io:format("Out=~p~n",[Out]),
     Result = au_graph_open(OutGraph),
-    io:format("here 12 Result=~p~n",[Result]),
+    %% io:format("here 12 Result=~p~n",[Result]),
     au_graph_connect_node_input(OutGraph, SynthNode, 0, Limiter, 0),
     au_graph_connect_node_input(OutGraph, Limiter, 0, Out, 0),
     OutSynth = au_graph_node_info(OutGraph, SynthNode, 0),
     au_graph_initialize(OutGraph),
-    io:format("so far~n"),
+    %% io:format("so far~n"),
     music_device_midi_event(OutSynth, 176, 0, 0,0),
     music_device_midi_event(OutSynth, 192, 0, 0,0),
     au_graph_start(OutGraph),
     ProgChange=12,
     Instrument=1,
+    Channel = 0, 
     music_device_midi_event(OutSynth, ProgChange, Instrument, 0,0),
-    music_device_midi_event(OutSynth, 144, 20, 127, 0),
-    music_device_midi_event(OutSynth, 144, 21, 127, 0),
-    music_device_midi_event(OutSynth, 144, 22, 127, 0),
-    music_device_midi_event(OutSynth, 144, 52, 127, 0),
-    music_device_midi_event(OutSynth, 144, 52, 127, 0),
-
-
+    music_device_midi_event(OutSynth,
+			    (?kMidiMessage_ControlChange bsl 4) bor Channel, 
+			    ?kMidiMessage_BankMSBControl, 
+			    0, 0),
+    music_device_midi_event(OutSynth,
+			    (?kMidiMessage_ProgramChange bsl 4) bor Channel, 
+			    0,0,0),
+    set_instrument(OutSynth, Instrument),
+    NoteOnCommand = (?kMidiMessage_NoteOn bsl 4) bor Channel,
+    music_device_midi_event(OutSynth, NoteOnCommand, 20, 127, 0),
+    for(fun(I) ->
+		note_on(OutSynth, Channel, I, 127),
+		sleep(100),
+		note_off(OutSynth, Channel, I)
+	end, 20, 80),
+    for(fun(I) ->
+		set_instrument(OutSynth, I),
+		note_on(OutSynth, Channel, 50, 127),
+		sleep(50),
+		note_off(OutSynth, Channel,50)
+	end, 1, 120),
     true.
+
+note_off(Synt, Channel, Pitch) ->
+    note_on(Synt, Channel, Pitch, 0).
+
+note_on(Synt, Channel, Pitch, Vol) ->
+    NoteOnCommand = (?kMidiMessage_NoteOn bsl 4) bor Channel,
+    music_device_midi_event(Synt, NoteOnCommand, Pitch, Vol, 0).
+
+set_instrument(Synth, Instrument) ->
+    music_device_midi_event(Synth, ?kMidiMessageProgramChange,
+			    Instrument, 0, 0).
+
+for(F, I, I) -> F(I);
+for(F, I, J) -> F(I),for(F,I+1,J).
+
+sleep(T) ->
+    receive
+    after T ->
+	    true
+    end.
+
 
 au_graph_start(_) ->
     void.
@@ -57,7 +102,7 @@ au_graph_connect_node_input(_,_,_,_,_) ->
     void.
 
 my_graph_add_node(G, {<<Type:32>>,<<SubType:32>>,<<Manu:32>>}) ->
-    io:format("au_graph_add_node: Type:~p Sub:~p Man:~p~n",[Type,SubType,Manu]),
+    %% io:format("au_graph_add_node: Type:~p Sub:~p Man:~p~n",[Type,SubType,Manu]),
     au_graph_add_node(G, {Type, SubType, Manu}).
 
 au_graph_open(_) ->
@@ -281,3 +326,48 @@ nif_list_type(_) ->
 %% audio unit type is appropriate for a tone generator. Unlike an
 %% instrument unit, a generator unit does not have a control input.
 %% Available in OS X v10.3 and later.  Declared in AUComponent.h.
+
+instruments() ->
+    ["Acoustic Grand Piano", "Bright Acoustic Piano",
+     "Electric Grand Piano", "Honky-tonk Piano",
+     "Electric Piano 1", "Electric Piano 2", "Harpsichord",
+     "Clavi", "Celesta", "Glockenspiel", "Music Box",
+     "Vibraphone", "Marimba", "Xylophone", "Tubular Bells",
+     "Dulcimer", "Drawbar Organ", "Percussive Organ",
+     "Rock Organ", "Church Organ", "Reed Organ",
+     "Accordion", "Harmonica", "Tango Accordion",
+     "Acoustic Guitar (nylon)", "Acoustic Guitar (steel)",
+     "Electric Guitar (jazz)", "Electric Guitar (clean)",
+     "Electric Guitar (muted)", "Overdriven Guitar",
+     "Distortion Guitar", "Guitar harmonics",
+     "Acoustic Bass", "Electric Bass (finger)",
+     "Electric Bass (pick)", "Fretless Bass",
+     "Slap Bass 1", "Slap Bass 2", "Synth Bass 1",
+     "Synth Bass 2", "Violin", "Viola", "Cello",
+     "Contrabass", "Tremolo Strings", "Pizzicato Strings",
+     "Orchestral Harp", "Timpani", "String Ensemble 1",
+     "String Ensemble 2", "SynthStrings 1", "SynthStrings 2",
+     "Choir Aahs", "Voice Oohs", "Synth Voice",
+     "Orchestra Hit", "Trumpet", "Trombone", "Tuba",
+     "Muted Trumpet", "French Horn", "Brass Section",
+     "SynthBrass 1", "SynthBrass 2", "Soprano Sax",
+     "Alto Sax", "Tenor Sax", "Baritone Sax", "Oboe",
+     "English Horn", "Bassoon", "Clarinet", "Piccolo",
+     "Flute", "Recorder", "Pan Flute", "Blown Bottle",
+     "Shakuhachi", "Whistle", "Ocarina", "Lead 1 (square)",
+     "Lead 2 (sawtooth)", "Lead 3 (calliope)", "Lead 4 (chiff)",
+     "Lead 5 (charang)", "Lead 6 (voice)", "Lead 7 (fifths)",
+     "Lead 8 (bass + lead)", "Pad 1 (new age)", "Pad 2 (warm)",
+     "Pad 3 (polysynth)", "Pad 4 (choir)", "Pad 5 (bowed)",
+     "Pad 6 (metallic)", "Pad 7 (halo)", "Pad 8 (sweep)",
+     "FX 1 (rain)", "FX 2 (soundtrack)", "FX 3 (crystal)",
+     "FX 4 (atmosphere)", "FX 5 (brightness)", "FX 6 (goblins)",
+     "FX 7 (echoes)", "FX 8 (sci-fi)", "Sitar", "Banjo",
+     "Shamisen", "Koto", "Kalimba", "Bag pipe", "Fiddle",
+     "Shanai", "Tinkle Bell", "Agogo", "Steel Drums",
+     "Woodblock", "Taiko Drum", "Melodic Tom", "Synth Drum",
+     "Reverse Cymbal", "Guitar Fret Noise", "Breath Noise",
+     "Seashore", "Bird Tweet", "Telephone Ring",
+     "Helicopter", "Applause", "Gunshot"].
+
+  
