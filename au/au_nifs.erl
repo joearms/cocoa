@@ -3,7 +3,6 @@
 -on_load(load_lib/0).
 -import(lists, [reverse/1]).
 
-
 -define(kMidiMessage_ControlChange, 16#B).
 -define(kMidiMessage_ProgramChange, 16#C).
 -define(kMidiMessage_BankMSBControl, 0).
@@ -11,13 +10,18 @@
 -define(kMidiMessage_NoteOn,16#9).
 -define(kMidiMessageProgramChange,16#C0).
 
-
 test() ->
     L = all_aus(),
     %% elib1_misc:dump("au.tmp",L),
     io:format("L=~p~n#devices = ~p~n",[L,length(L)]).
 
 test1() ->
+    Synth = do_setup(),
+    %% io:format("Synth=~p~n",[Synth]),
+    play(Synth).
+
+do_setup() ->
+    %% io:format("make_au_graph~n"),
     OutGraph = make_au_graph(),
     %% io:format("OutGraph=~p~n",[OutGraph]),
     SynthNode = my_graph_add_node(OutGraph, {<<"aumu">>,<<"dls ">>,<<"appl">>}),
@@ -33,28 +37,34 @@ test1() ->
     OutSynth = au_graph_node_info(OutGraph, SynthNode, 0),
     au_graph_initialize(OutGraph),
     %% io:format("so far~n"),
-    music_device_midi_event(OutSynth, 176, 0, 0,0),
-    music_device_midi_event(OutSynth, 192, 0, 0,0),
+    %% music_device_midi_event(OutSynth, 176, 0, 0,0),
+    %% music_device_midi_event(OutSynth, 192, 0, 0,0),
     au_graph_start(OutGraph),
+    OutSynth.
+
+play(OutSynth) ->
     ProgChange=12,
     Instrument=1,
     Channel = 0, 
-    music_device_midi_event(OutSynth, ProgChange, Instrument, 0,0),
-    music_device_midi_event(OutSynth,
-			    (?kMidiMessage_ControlChange bsl 4) bor Channel, 
-			    ?kMidiMessage_BankMSBControl, 
-			    0, 0),
-    music_device_midi_event(OutSynth,
-			    (?kMidiMessage_ProgramChange bsl 4) bor Channel, 
-			    0,0,0),
+    %% music_device_midi_event(OutSynth, ProgChange, Instrument, 0,0),
+    %% music_device_midi_event(OutSynth,
+    %% 			    (?kMidiMessage_ControlChange bsl 4) bor Channel, 
+    %% 			    ?kMidiMessage_BankMSBControl, 
+    %% 			    0, 0),
+    %% music_device_midi_event(OutSynth,
+    %% 			    (?kMidiMessage_ProgramChange bsl 4) bor Channel, 
+    %% 			    0,0,0),
+    io:format("Instrument = Piano~n"),
     set_instrument(OutSynth, Instrument),
     NoteOnCommand = (?kMidiMessage_NoteOn bsl 4) bor Channel,
-    music_device_midi_event(OutSynth, NoteOnCommand, 20, 127, 0),
+    %% music_device_midi_event(OutSynth, NoteOnCommand, 20, 127, 0),
+    io:format("Fast scales~n"),
     for(fun(I) ->
 		note_on(OutSynth, Channel, I, 127),
-		sleep(100),
+		sleep(50),
 		note_off(OutSynth, Channel, I)
 	end, 20, 80),
+    io:format("All the instruments~n"),
     for(fun(I) ->
 		set_instrument(OutSynth, I),
 		note_on(OutSynth, Channel, 50, 127),
@@ -83,7 +93,6 @@ sleep(T) ->
 	    true
     end.
 
-
 au_graph_start(_) ->
     void.
 
@@ -101,9 +110,14 @@ au_graph_node_info(_,_,_) ->
 au_graph_connect_node_input(_,_,_,_,_) ->
     void.
 
+au_init() ->
+    void.
+
 my_graph_add_node(G, {<<Type:32>>,<<SubType:32>>,<<Manu:32>>}) ->
     %% io:format("au_graph_add_node: Type:~p Sub:~p Man:~p~n",[Type,SubType,Manu]),
-    au_graph_add_node(G, {Type, SubType, Manu}).
+    Val = au_graph_add_node(G, {Type, SubType, Manu}),
+    %% io:format("here mygarph add node=~p~n",[Val]),
+    Val.
 
 au_graph_open(_) ->
     true.
@@ -115,18 +129,18 @@ make_au_graph() ->
     dummy.
 
 load_lib() ->
+    %% io:format("load_lib~n"),
     Z = erlang:load_nif("./au_nifs", 0),
     %% erlang:display({z,Z}),
-    Z.
-
-
+    %% io:format("load_lib done:~p~n",[Z]).
+    ok.
+    
 all_aus() ->
     lists:flatten([list_aus(I) || I <- au_types()]).
 
 au_types() ->
     [<<"aufx">>,<<"aumf">>,<<"auol">>,<<"aumu">>,<<"augn">>,<<"aufc">>,<<"aumx">>,
      <<"aupn">>,<<"auou">>].
-
 
 list_aus(<<Int:32>>) ->
     L = nif_list_type(Int),

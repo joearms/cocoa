@@ -9,8 +9,10 @@ MODS := $(wildcard *.erl)
             -I/usr/local/lib/erlang/erts-5.9/include $<
 
 all: beam  au_nifs.so au_nifs.c
-	erl -s au_nifs test1 -s init stop
+	@erl -noshell -s au_nifs test1 -s init stop
 
+chords: beam au_nifs.so au_nifs.c
+	@erl -noshell -s play start -s init stop
 
 beam: ${MODS:%.erl=%.beam}
 

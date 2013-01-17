@@ -79,25 +79,25 @@ static void destroy_au_graph(ErlNifEnv* env, void* obj)
   fprintf(stderr, "destroy au_graph\r\n");
 }
 
-
-int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
+static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
 {
-    my_au_graph_type = enif_open_resource_type(env, NULL, "joesresource1",
-					  destroy_au_graph,
-					  ERL_NIF_RT_CREATE,
-					  NULL);
- 
-    my_au_node_type = enif_open_resource_type(env, NULL, "joesresource2",
+
+  // fprintf(stderr, "load\r\n");
+  my_au_graph_type = enif_open_resource_type(env, NULL, "joesresource1",
+					     destroy_au_graph,
+					     ERL_NIF_RT_CREATE,
+					     NULL); 
+  my_au_node_type = enif_open_resource_type(env, NULL, "joesresource2",
 					 destroy_au_node,
 					 ERL_NIF_RT_CREATE,
 					 NULL);
  
-    my_audio_unit_type = enif_open_resource_type(env, NULL, "joesresource3",
-						 destroy_audio_unit,
-						 ERL_NIF_RT_CREATE,
-						 NULL);
-    return 0;
-  }
+  my_audio_unit_type = enif_open_resource_type(env, NULL, "joesresource3",
+					       destroy_audio_unit,
+					       ERL_NIF_RT_CREATE,
+					       NULL);
+  return 0;
+}
 
 static ERL_NIF_TERM make_au_graph(ErlNifEnv* env, 
 				  int argc, 
@@ -290,7 +290,6 @@ static ErlNifFunc nif_funcs[] =
   {"music_device_midi_event", 5, music_device_midi_event}
 };
 
-ERL_NIF_INIT(au_nifs,nif_funcs,load,NULL,NULL,NULL)
 
 ERL_NIF_TERM enif_make_handle(ErlNifEnv* env, void* obj)
 {
@@ -300,3 +299,4 @@ ERL_NIF_TERM enif_make_handle(ErlNifEnv* env, void* obj)
   return handle;
 }
 
+ERL_NIF_INIT(au_nifs,nif_funcs,&load,NULL,NULL,NULL)
